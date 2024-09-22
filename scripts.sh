@@ -1,6 +1,6 @@
 
 # Path Location Google Collab
-cd /content/drive/MyDrive/TEC/Tesis-TEC/POSTER/
+cd /content/drive/MyDrive/TEC/Tesis-TEC/CODE/POSTER/
 
 
 # CHANGE name of files
@@ -10,7 +10,7 @@ do
 done
 
 # Google Collab Location
-nohup python train.py --gpu 0 --batch_size 125 --dataset rafdb --epochs 250 > training.log &
+nohup python train.py --gpu 0 --batch_size 110 --dataset rafdb --epochs 250 > training.log &
 
 # LOCAL
 nohup python train.py --gpu 0 --batch_size 95 --dataset rafdb --epochs 250 > training.log &
