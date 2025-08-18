@@ -6,6 +6,9 @@ cd /content/drive/MyDrive/TEC/Tesis-TEC/CODE/POSTER_Aaron
 # Google Collab Location
 # Training multiple models in parallel with nohup
 
+# Train small model without weights
+nohup python train.py --gpu 0 --batch_size 100 --dataset rafdb --modeltype small --epochs 250 > training_small_no_weights.log 2>&1 &
+
 # Train base model without weights
 nohup python train.py --gpu 0 --batch_size 100 --dataset rafdb --modeltype base --epochs 250 > training_base_no_weights.log 2>&1 &
 
