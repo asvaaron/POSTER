@@ -68,6 +68,36 @@ class ClassificationHead(nn.Module):
         return y_hat
 
 
+class EnhancedClassificationHead(nn.Module):
+    """
+    Enhanced classification head with regularization and deeper structure
+    """
+
+    def __init__(self, input_dim: int, target_dim: int, dropout_rate=0.3, hidden_ratio=0.5):
+        super().__init__()
+        hidden_dim = int(input_dim * hidden_ratio)
+
+        self.features = nn.Sequential(
+            # Input normalization
+            nn.BatchNorm1d(input_dim),
+            nn.Dropout(dropout_rate),
+
+            # First hidden layer
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm1d(hidden_dim),
+            nn.Dropout(dropout_rate / 2),
+
+            # Output layer
+            nn.Linear(hidden_dim, target_dim)
+        )
+
+    def forward(self, x):
+        x = x.view(x.size(0), -1)
+        return self.features(x)
+
+
+
 class pyramid_trans_expr(nn.Module):
     def __init__(self, img_size=224, num_classes=7, type="large"):
         super().__init__()
@@ -108,7 +138,11 @@ class pyramid_trans_expr(nn.Module):
 
 
         self.se_block = SE_block(input_dim=512)
-        self.head = ClassificationHead(input_dim=512, target_dim=self.num_classes)
+        #self.head = ClassificationHead(input_dim=512, target_dim=self.num_classes)
+        self.head = EnhancedClassificationHead(
+            input_dim=512,
+            target_dim=self.num_classes
+        )
 
 
     def forward(self, x):
