@@ -27,10 +27,18 @@ wait
 # LOCAL
 nohup python train.py --gpu 0 --batch_size 95 --dataset rafdb --epochs 250 > training.log &
 
-nohup python train.py --gpu 0,1 --batch_size 150 --dataset rafdb --epochs 250 > training.log &
+nohup python train.py --gpu 0,1 --batch_size 120 --dataset rafdb --modeltype large --epochs 250 > training.log &
+nohup python train.py --gpu 0,1 --batch_size 120 --dataset rafdb --modeltype base --epochs 250 > training.log &
+nohup python train.py --gpu 0,1 --batch_size 120 --dataset rafdb --modeltype small --epochs 250 > training.log &
 
 
 ## Test Dataset
+python test.py --gpu 0,1 --batch_size 120 --dataset rafdb --modeltype base --checkpoint checkpoint/local_base/epoch162_acc0.9254.pth -p
+
+python test.py --gpu 0,1 --batch_size 150 --dataset rafdb --modeltype base --checkpoint checkpoint/epoch56_acc0.9273.pth -p
+
+# Test Enhanced
+python test.py --gpu 0,1 --batch_size 150 --dataset rafdb --modeltype base --checkpoint checkpoint/local_base_enhanced_v1/epoch219_acc0.9247.pth -p
 
 
 # Test small model
