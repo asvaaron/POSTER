@@ -66,7 +66,7 @@ def run_training():
         num_classes = 7
         train_dataset = RafDataSet(datapath, train=True, transform=data_transforms, basic_aug=True)
         val_dataset = RafDataSet(datapath, train=False, transform=data_transforms_val)
-        model = pyramid_trans_expr(img_size=224, num_classes=num_classes, type=args.modeltype)
+        model = pyramid_trans_expr(img_size=224, num_classes=num_classes, head_type='enhanced_v2')
 
     elif args.dataset == "affectnet":
         datapath = './data/AffectNet/'
