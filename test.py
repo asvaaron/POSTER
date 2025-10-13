@@ -25,6 +25,7 @@ def parse_args():
     parser.add_argument('--modeltype', type=str, default='large', help='small or base or large')
     parser.add_argument('--workers', default=2, type=int, help='Number of data loading workers (default: 4)')
     parser.add_argument('--gpu', type=str, default='0', help='assign multi-gpus by comma concat')
+    parser.add_argument('--head_type', type=str, default='simple', help='assign head type')
     parser.add_argument('-p', '--plot_cm', action="store_true", help="Ploting confusion matrix.")
     return parser.parse_args()
 
@@ -44,7 +45,8 @@ def test():
         datapath = './data/raf-basic/'
         num_classes = 7
         test_dataset = RafDataSet(datapath, train=False, transform=data_transforms_test)
-        model = pyramid_trans_expr(img_size=224, num_classes=num_classes, type=args.modeltype)
+        model = pyramid_trans_expr(img_size=224, num_classes=num_classes, type=args.modeltype, head_type=args.head_type)
+        print(args)
 
     elif args.dataset == "affectnet":
         datapath = './data/AffectNet/'
