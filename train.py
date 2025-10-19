@@ -18,6 +18,7 @@ from time import time
 from utils import *
 from data_preprocessing.sam import SAM
 from models.emotion_hyp import pyramid_trans_expr
+from fvcore.nn import FlopCountAnalysis
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -108,6 +109,27 @@ def run_training():
 
     model = torch.nn.DataParallel(model)
     model = model.cuda()
+
+    from ptflops import get_model_complexity_info
+
+    if hasattr(model, 'module'):
+        actual_model = model.module
+    else:
+        actual_model = model
+
+    macs, params = get_model_complexity_info(
+        actual_model,
+        (3, 224, 224),
+        as_strings=False,
+        print_per_layer_stat=False
+    )
+    # Now macs is a number, not a string
+    flops = macs * 2
+    gflops = flops / 1e9
+
+    print("GFLOPs: {:.2f}".format(gflops))
+    print("GMacs: {:.2f}".format(macs / 1e9))
+    print("Params: {:.2f}M".format(params / 1e6))
 
     print("batch_size:", args.batch_size)
 

@@ -296,6 +296,23 @@ class EnhancedHead_v6(nn.Module):
 
         return self.classifier(x)
 
+class EnhancedHead_v7_RNN(nn.Module):
+    def __init__(self, input_dim: int, target_dim: int, hidden_dim=256, dropout_rate=0.3):
+        super().__init__()
+        self.fc_in = nn.Linear(input_dim, hidden_dim)
+        self.rnn = nn.GRU(hidden_dim, hidden_dim, batch_first=True)
+        self.fc_out = nn.Linear(hidden_dim, target_dim)
+        self.dropout = nn.Dropout(dropout_rate)
+        self.bn = nn.BatchNorm1d(input_dim)
+
+    def forward(self, x):
+        x = x.view(x.size(0), -1)
+        x = self.bn(x)
+        x = self.fc_in(x).unsqueeze(1)  # sequence len = 1
+        x, _ = self.rnn(x)
+        x = self.dropout(x[:, -1, :])
+        out = self.fc_out(x)
+        return out
 
 class pyramid_trans_expr(nn.Module):
     def __init__(self, img_size=224, num_classes=7, type="large", head_type="simple"):
@@ -347,6 +364,8 @@ class pyramid_trans_expr(nn.Module):
             self.head = EnhancedHead_v5(input_dim=512, target_dim=self.num_classes)
         elif head_type == "enhanced_v6":
             self.head = EnhancedHead_v6(input_dim=512, target_dim=self.num_classes)
+        elif head_type == "enhanced_v7":
+            self.head = EnhancedHead_v7_RNN(input_dim=512, target_dim=self.num_classes)
         else:
             raise ValueError(f"Unknown head_type: {head_type}")
 
