@@ -5,6 +5,7 @@ epochs = []
 train_loss = []
 val_loss = []
 
+file_name = "log/training_base_no_weights.log"
 
 with open("log/training_local_base_enhanced_v1.log", "r") as f:
     for line in f:
@@ -18,9 +19,16 @@ with open("log/training_local_base_enhanced_v1.log", "r") as f:
             loss = float(re.search(r"Loss:([0-9.]+)", line).group(1))
             val_loss.append(loss)
 
+# Define max of Epochs
+MAX_EPOCH = 200
+
+filtered_epochs = [e for e in epochs if e <= MAX_EPOCH]
+idx = len(filtered_epochs)
+
+# Plot file
 plt.figure()
-plt.plot(epochs, train_loss, label="Train Loss")
-#plt.plot(epochs, val_loss, label="Validation Loss")
+plt.plot(epochs[:idx], train_loss[:idx], label="Train Loss")
+plt.plot(epochs[:idx], val_loss[:idx], label="Validation Loss")
 plt.xlabel("Epoch")
 plt.ylabel("Loss")
 plt.title("Loss per Epoch")
