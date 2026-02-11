@@ -29,43 +29,63 @@ def parse_log(log_file):
                 acc = float(acc.rstrip(","))
 
                 val_loss.append(loss)
-                train_acc.append(acc)
+                val_acc.append(acc)
 
     return epochs, train_loss, val_loss, train_acc, val_acc
 
 
-file_name = "log/training_large_no_weights.log"
+file_name = "log/training_local_base_simple.log"
 
 epochs1, train_loss1, val_loss1, train_acc1, val_acc1 = parse_log(file_name)
 
-file_name2 = "log/training_local_large_enhanced_v1.log"
+file_name2 = "log/training_local_base_enhanced_v1.log"
 
 epochs2, train_loss2, val_loss2, train_acc2, val_acc2 = parse_log(file_name2)
 
 # Define max of Epochs
-MAX_EPOCH = 200
+MAX_EPOCH = 250
+# Define model size name
+model_size_name = "Base"
 
 filtered_epochs = [e for e in epochs1 if e <= MAX_EPOCH]
 idx = len(filtered_epochs)
 # Training Loss
-
-# Plot file
 plt.figure()
 plt.plot(epochs1[:idx], train_loss1[:idx], label="Train Loss No Changes")
 plt.plot(epochs2[:idx], train_loss2[:idx], label="Train Loss Changes")
 plt.xlabel("Epoch")
 plt.ylabel("Loss")
-plt.title("Loss per Epoch large")
+plt.title(f"Training Loss per Epoch {model_size_name}")
 plt.legend()
 plt.show()
 
 # Validation Loss
-
 plt.figure()
 plt.plot(epochs1[:idx], val_loss1[:idx], label="Validation Loss No Changes")
 plt.plot(epochs2[:idx], val_loss2[:idx], label="Validation Loss Changes")
 plt.xlabel("Epoch")
 plt.ylabel("Loss")
-plt.title("Loss per Epoch large")
+plt.title(f"Validation Loss per Epoch {model_size_name}")
+plt.legend()
+plt.show()
+
+# Training Accuracy
+plt.figure()
+plt.plot(epochs1[:idx], val_acc1[:idx], label="Training Accuracy No Changes")
+plt.plot(epochs2[:idx], val_acc2[:idx], label="Training Accuracy Changes")
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy")
+plt.title(f"Training Accuracy per Epoch {model_size_name}")
+plt.legend()
+plt.show()
+
+
+# Validation Accuracy
+plt.figure()
+plt.plot(epochs1[:idx], train_acc1[:idx], label="Validation Accuracy No Changes")
+plt.plot(epochs2[:idx], train_acc2[:idx], label="Validation Accuracy Changes")
+plt.xlabel("Epoch")
+plt.ylabel("Accuracy")
+plt.title(f"Validation Accuracy per Epoch {model_size_name}")
 plt.legend()
 plt.show()
