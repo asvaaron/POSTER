@@ -34,18 +34,18 @@ def parse_log(log_file):
     return epochs, train_loss, val_loss, train_acc, val_acc
 
 
-file_name = "log/training_local_base_simple.log"
+file_name = "log/training_local_large_simple.log"
 
 epochs1, train_loss1, val_loss1, train_acc1, val_acc1 = parse_log(file_name)
 
-file_name2 = "log/training_local_base_enhanced_v1.log"
+file_name2 = "log/training_local_large_enhanced_v1.log"
 
 epochs2, train_loss2, val_loss2, train_acc2, val_acc2 = parse_log(file_name2)
 
 # Define max of Epochs
 MAX_EPOCH = 250
 # Define model size name
-model_size_name = "Base"
+model_size_name = "Large"
 
 filtered_epochs = [e for e in epochs1 if e <= MAX_EPOCH]
 idx = len(filtered_epochs)

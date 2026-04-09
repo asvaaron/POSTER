@@ -410,77 +410,108 @@ def run_confusion_chisquare(all_preds, gt_labels, model_names, class_names,
     Tests whether the PATTERN of errors (which classes get confused with which)
     differs significantly between two models.
 
-    Unlike McNemar (which only asks correct/wrong), this test uses the full
-    N×N confusion matrix to detect if Model B confuses Sad→Neutral less often
-    than Model A, even if overall accuracy is similar.
+    IMPORTANT: Uses ONLY off-diagonal cells (actual misclassifications).
+    The diagonal (correct predictions) is excluded because including it
+    artificially inflates χ² and Cramér's V by orders of magnitude — the
+    thousands of correct Happy predictions would dominate and mask the real
+    signal in the error cells.
 
-    H0: The confusion matrix structure is the same for both models
-        (errors are distributed identically across classes)
-    H1: The two models make errors on different class pairs
-        (one model has a systematically different confusion pattern)
+    For each pair, builds a 2 × (N*N - N) table:
+      Row 0 = Model A's off-diagonal error counts (flattened)
+      Row 1 = Model B's off-diagonal error counts (flattened)
+    Chi-square tests whether the distribution of errors across class-pairs
+    is the same for both models.
 
-    Uses chi-square test of independence on the flattened confusion matrices.
-    Cramér's V is reported as effect size:
+    H0: Both models distribute their errors across class-pairs identically
+    H1: One model confuses different class-pairs more/less than the other
+
+    Cramér's V = effect size (scale-independent):
       V < 0.10 → Negligible | 0.10–0.30 → Small | 0.30–0.50 → Medium | > 0.50 → Large
     """
     pairs = list(combinations(model_names, 2))
     rows  = []
     num_classes = len(class_names)
 
+    # Off-diagonal indices: all (i,j) where i != j
+    off_idx = [(i, j) for i in range(num_classes)
+                       for j in range(num_classes) if i != j]
+    pair_labels = [f"{class_names[i]}→{class_names[j]}" for i, j in off_idx]
+
     print("\n" + "=" * 80)
-    print("TEST 5 — Confusion Matrix Chi-Square")
-    print("  H0: Both models produce the same confusion pattern across classes")
-    print("  H1: The models differ in which classes they confuse with each other")
+    print("TEST 5 — Confusion Matrix Chi-Square  (errors only, diagonal excluded)")
+    print("  H0: Both models distribute errors across class-pairs identically")
+    print("  H1: The models differ in which class-pairs they confuse")
     print("  Effect size: Cramér's V  "
           "(< 0.10 Negligible | 0.10–0.30 Small | 0.30–0.50 Medium | > 0.50 Large)")
     print("=" * 80)
 
     for (na, nb) in pairs:
         cm_a = confusion_matrix(gt_labels, all_preds[na],
-                                labels=list(range(num_classes)))
+                                labels=list(range(num_classes))).astype(float)
         cm_b = confusion_matrix(gt_labels, all_preds[nb],
-                                labels=list(range(num_classes)))
+                                labels=list(range(num_classes))).astype(float)
 
-        # Stack confusion matrices: shape (2*N, N) — one row block per model
-        # Chi-square tests if the row distributions (error profiles) differ
-        combined = np.vstack([cm_a, cm_b])
+        # Extract only off-diagonal cells as 1-D vectors
+        errors_a = np.array([cm_a[i, j] for i, j in off_idx])
+        errors_b = np.array([cm_b[i, j] for i, j in off_idx])
+
+        # 2 × K table: row 0 = model A errors, row 1 = model B errors
+        table = np.vstack([errors_a, errors_b])
+
+        # Drop columns where BOTH models have 0 errors (unobservable pairs)
+        nonzero_cols = (table.sum(axis=0) > 0)
+        table_filtered = table[:, nonzero_cols]
+        active_pairs   = [pair_labels[k] for k in range(len(pair_labels))
+                          if nonzero_cols[k]]
+
+        total_errors_a = int(errors_a.sum())
+        total_errors_b = int(errors_b.sum())
 
         try:
-            chi2, pval, dof, _ = chi2_contingency(combined, correction=False)
-            # Cramér's V = sqrt(χ² / (n * (min(r,c) - 1)))
-            n_total = combined.sum()
-            min_dim = min(combined.shape) - 1
-            cramers_v = np.sqrt(chi2 / (n_total * min_dim)) if min_dim > 0 else 0.0
+            chi2, pval, dof, expected = chi2_contingency(
+                table_filtered, correction=False)
+            # Cramér's V for a 2×K table: V = sqrt(χ² / (N * (min(r,c) - 1)))
+            # N must be total test samples (not just errors) so V is comparable
+            # across pairs with different error counts.
+            # For 2 rows: min(r,c)-1 = 1, so V = sqrt(χ² / N_test)
+            n_test    = len(gt_labels)
+            cramers_v = np.sqrt(chi2 / n_test) if n_test > 0 else 0.0
         except Exception:
             chi2, pval, dof, cramers_v = float('nan'), float('nan'), 0, float('nan')
 
         sig = pval < alpha
 
-        # Effect size label
-        if np.isnan(cramers_v):    v_label = 'N/A'
-        elif cramers_v < 0.10:     v_label = 'Negligible'
-        elif cramers_v < 0.30:     v_label = 'Small'
-        elif cramers_v < 0.50:     v_label = 'Medium'
-        else:                      v_label = 'Large'
+        if np.isnan(cramers_v):  v_label = 'N/A'
+        elif cramers_v < 0.10:   v_label = 'Negligible'
+        elif cramers_v < 0.30:   v_label = 'Small'
+        elif cramers_v < 0.50:   v_label = 'Medium'
+        else:                    v_label = 'Large'
 
         print(f"\n  ── {na}  vs  {nb} ──")
+        print(f"    Total errors: A={total_errors_a}  B={total_errors_b}  "
+              f"Active confusion pairs={len(active_pairs)}")
         print(f"    χ²={chi2:.4f}  dof={dof}  p={pval:.4f}  "
               f"Cramér's V={cramers_v:.4f} ({v_label})  "
               f"→  {'SIGNIFICANT ✓' if sig else 'not significant'}")
 
-        # Show which off-diagonal cells differ most between models
-        diff = cm_b.astype(int) - cm_a.astype(int)
-        print(f"    Top confusion shifts (B − A, off-diagonal only):")
-        off_diag = [(diff[i, j], class_names[i], class_names[j])
-                    for i in range(num_classes) for j in range(num_classes) if i != j]
-        off_diag.sort(key=lambda x: abs(x[0]), reverse=True)
-        for delta, true_cls, pred_cls in off_diag[:5]:
+        # Top confusion shifts: off-diagonal difference B - A
+        diff_vec = errors_b - errors_a
+        shifts   = sorted(zip(diff_vec, pair_labels), key=lambda x: abs(x[0]),
+                          reverse=True)
+
+        print(f"    Top confusion shifts (B − A):")
+        for delta, pair in shifts[:8]:
+            if abs(delta) == 0:
+                break
+            true_cls, pred_cls = pair.split('→')
             direction = 'B fixes ✓' if delta < 0 else 'B regresses ✗'
-            print(f"      True={true_cls:<10} Pred={pred_cls:<10} "
-                  f"Δ={delta:+4d}  {direction}")
+            print(f"      {true_cls:<10} → {pred_cls:<10}  "
+                  f"Δ={int(delta):+4d}   {direction}")
 
         rows.append({
             'Model A': na, 'Model B': nb,
+            'Errors A': total_errors_a, 'Errors B': total_errors_b,
+            'Active pairs': len(active_pairs),
             'Chi2': f"{chi2:.4f}", 'dof': dof,
             'p-value': f"{pval:.4f}",
             "Cramér's V": f"{cramers_v:.4f}",
